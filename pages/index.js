@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { request } from "../lib/datocms";
+import _ from 'lodash'
 
 /** @jsx jsx */
 import { jsx } from "theme-ui";
@@ -29,18 +30,34 @@ export async function getStaticProps() {
 
 const IndexPage = ({ data }) => {
   const [score, setScore] = useState(0);
-  console.log("Score:", score);
+  const [questions, setQuestions] = useState(_.map(data.allQuestions, q => {
+    return { ...q, score: 0 }
+  }));
 
-  const allQuestions = [];
+  console.log("Questions:", JSON.stringify(questions, null, 2));
+
+  useEffect(() => {
+
+    const questionsScores = _.sumBy(questions, 'score');
+    setScore(questionsScores)
+
+  }, [questions])
+
+  const setQuestion = (question) => {
+    const clonedQuestions = _.cloneDeep(questions)
+      var questionIndex = _.findIndex(clonedQuestions, { id: question.id });
+      clonedQuestions.splice(questionIndex, 1, question)
+      setQuestions(clonedQuestions);
+  }
 
   return (
     <div>
-      {data.allQuestions.map((question) => (
+      <h1>{score}</h1>
+      {questions.map((question) => (
         <Question
           key={question.id}
-          qid={question.id}
-          question={question.question}
-          category={question.category.category}
+          question={question}
+          setQuestion={setQuestion}
         />
       ))}
     </div>
