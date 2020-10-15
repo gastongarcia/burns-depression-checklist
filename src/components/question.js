@@ -2,10 +2,10 @@ import React from "react";
 
 const Question = (props) => {
   return (
-    <div className="rounded bg-gray-300 p-5 my-8">
+    <div className="rounded bg-gray-300 p-5 my-8" key={props.qid}>
       <div className="q">
         <p className="text-xs">
-          Category:{" "}
+          {props.qid} Category:{" "}
           <span className="font-bold blue-600 p-1 rounded-sm">
             {props.category}
           </span>

@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { request } from "../lib/datocms";
 import Question from "../src/components/question";
 
 const HOMEPAGE_QUERY = `query MyQuery {
   allQuestions(orderBy: _createdAt_ASC) {
+    id
     question
     category {
       category
@@ -23,10 +24,16 @@ export async function getStaticProps() {
 }
 
 const IndexPage = ({ data }) => {
+  const [score, setScore] = useState(0);
+  console.log("Score:", score);
+
+  const allQuestions = [];
+
   return (
     <div>
       {data.allQuestions.map((question) => (
         <Question
+          qid={question.id}
           question={question.question}
           category={question.category.category}
         />
