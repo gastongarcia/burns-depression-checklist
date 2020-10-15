@@ -16,7 +16,7 @@ const Question = ({ question, setQuestion }) => {
     <div key={question.qid}>
       <div className="q">
         <p>
-          Category: <span>{question.category.category} - {question.score}</span>
+          Category: <span>{question.category.category}</span>
         </p>
         <h2>{question.question}</h2>
       </div>
