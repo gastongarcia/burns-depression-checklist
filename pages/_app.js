@@ -1,10 +1,15 @@
-import "../styles/globals.css";
+/** @jsx jsx */
+import { jsx } from "theme-ui";
+import { ThemeProvider } from "theme-ui";
+import theme from "../theme";
 
 function MyApp({ Component, pageProps }) {
   return (
-    <div className="wrap m-10">
-      <Component {...pageProps} />
-    </div>
+    <ThemeProvider theme={theme}>
+      <div>
+        <Component {...pageProps} />
+      </div>
+    </ThemeProvider>
   );
 }
 

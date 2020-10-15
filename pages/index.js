@@ -1,5 +1,9 @@
 import React, { useState } from "react";
 import { request } from "../lib/datocms";
+
+/** @jsx jsx */
+import { jsx } from "theme-ui";
+
 import Question from "../src/components/question";
 
 const HOMEPAGE_QUERY = `query MyQuery {
@@ -33,6 +37,7 @@ const IndexPage = ({ data }) => {
     <div>
       {data.allQuestions.map((question) => (
         <Question
+          key={question.id}
           qid={question.id}
           question={question.question}
           category={question.category.category}
