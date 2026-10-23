@@ -264,7 +264,6 @@ function Intro({ t, answered, onStart, onResume, onViewResult }) {
         )}
       </div>
       <p className="fine">{t.introFine}</p>
-      {t.translationNote && <p className="fine">{t.translationNote}</p>}
     </section>
   );
 }
@@ -476,7 +475,6 @@ function Results({ t, lang, data, answers, history, onEdit, onRestart }) {
       <div className="panel note">
         <h3>{t.aboutTitle}</h3>
         <p>{t.about}</p>
-        {t.translationNote && <p>{t.translationNote}</p>}
       </div>
 
       <div className="actions">
