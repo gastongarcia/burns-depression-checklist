@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SECTIONS, QUESTIONS, OPTIONS, MAX_SCORE, BANDS, bandFor } from "./checklist";
+import { LANGS, QUESTION_COUNT, OPTION_COUNT, MAX_SCORE, checklist, bandIndex } from "./checklist";
+import { STRINGS } from "./strings";
 
 const PROGRESS_KEY = "bdc:progress";
 const HISTORY_KEY = "bdc:history";
+const LANG_KEY = "bdc:lang";
 const ADVANCE_DELAY = 260;
 
 function load(key, fallback) {
@@ -23,10 +25,11 @@ function save(key, value) {
   } catch {}
 }
 
-const emptyAnswers = () => QUESTIONS.map(() => null);
+const emptyAnswers = () => Array.from({ length: QUESTION_COUNT }, () => null);
 
 export default function Home() {
   const [ready, setReady] = useState(false);
+  const [lang, setLang] = useState("en");
   const [screen, setScreen] = useState("intro");
   const [answers, setAnswers] = useState(emptyAnswers);
   const [index, setIndex] = useState(0);
@@ -35,8 +38,12 @@ export default function Home() {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
+    const savedLang = load(LANG_KEY, null);
+    if (LANGS.includes(savedLang)) setLang(savedLang);
+    else if (navigator.language?.toLowerCase().startsWith("es")) setLang("es");
+
     const progress = load(PROGRESS_KEY, null);
-    if (progress?.answers?.length === QUESTIONS.length) {
+    if (progress?.answers?.length === QUESTION_COUNT) {
       setAnswers(progress.answers);
       setIndex(progress.index ?? 0);
       setStartedAt(progress.startedAt);
@@ -47,9 +54,19 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    document.documentElement.lang = lang;
+    document.title = STRINGS[lang].title;
+  }, [lang]);
+
+  useEffect(() => {
     if (!ready || !startedAt) return;
     save(PROGRESS_KEY, { startedAt, answers, index, done: screen === "results" });
   }, [ready, startedAt, answers, index, screen]);
+
+  const changeLang = (next) => {
+    setLang(next);
+    save(LANG_KEY, next);
+  };
 
   const finish = useCallback(
     (finalAnswers) => {
@@ -75,8 +92,6 @@ export default function Home() {
     setScreen("quiz");
   };
 
-  const resume = () => setScreen("quiz");
-
   const editQuestion = (i) => {
     setIndex(i);
     setEditing(true);
@@ -85,13 +100,27 @@ export default function Home() {
 
   if (!ready) return <main className="shell" />;
 
-  const inProgress = startedAt && answers.some((a) => a !== null) && screen === "intro";
+  const t = STRINGS[lang];
+  const data = checklist(lang);
+  const answered = answers.filter((a) => a !== null).length;
+  const inProgress = startedAt && answered > 0 && screen === "intro";
 
   return (
     <main className="shell">
-      {screen === "intro" && <Intro onStart={start} onResume={inProgress ? resume : null} answered={answers.filter((a) => a !== null).length} />}
+      <nav className="lang" aria-label="Language / Idioma">
+        {LANGS.map((l) => (
+          <button key={l} lang={l} aria-pressed={l === lang} className={l === lang ? "on" : ""} onClick={() => changeLang(l)}>
+            {STRINGS[l].langName}
+          </button>
+        ))}
+      </nav>
+      {screen === "intro" && (
+        <Intro t={t} onStart={start} onResume={inProgress ? () => setScreen("quiz") : null} answered={answered} />
+      )}
       {screen === "quiz" && (
         <Quiz
+          t={t}
+          data={data}
           answers={answers}
           setAnswers={setAnswers}
           index={index}
@@ -101,46 +130,45 @@ export default function Home() {
           onFinish={finish}
         />
       )}
-      {screen === "results" && <Results answers={answers} history={history} onEdit={editQuestion} onRestart={start} />}
+      {screen === "results" && (
+        <Results t={t} lang={lang} data={data} answers={answers} history={history} onEdit={editQuestion} onRestart={start} />
+      )}
     </main>
   );
 }
 
-function Intro({ onStart, onResume, answered }) {
+function Intro({ t, onStart, onResume, answered }) {
   return (
     <section className="intro fade">
-      <p className="eyebrow">From David D. Burns, <em>Feeling Good</em></p>
-      <h1>How are you feeling, really?</h1>
-      <p className="lede">
-        The Burns Depression Checklist is a short self-check for the symptoms of depression. Rate how much each one has
-        bothered you <strong>over the past week, including today</strong>.
-      </p>
+      <p className="eyebrow">{t.author}</p>
+      <h1>{t.title}</h1>
+      <p className="lede">{t.instructions}</p>
       <ul className="facts">
-        <li><span>25</span> questions</li>
-        <li><span>3</span> minutes</li>
-        <li><span>0</span> data sent anywhere</li>
+        {t.facts.map(([value, label]) => (
+          <li key={label}>
+            <span>{value}</span> {label}
+          </li>
+        ))}
       </ul>
       <div className="actions">
         {onResume ? (
           <>
-            <button className="btn primary" onClick={onResume}>Continue ({answered} of {QUESTIONS.length})</button>
-            <button className="btn ghost" onClick={onStart}>Start over</button>
+            <button className="btn primary" onClick={onResume}>{t.resume(answered, QUESTION_COUNT)}</button>
+            <button className="btn ghost" onClick={onStart}>{t.startOver}</button>
           </>
         ) : (
-          <button className="btn primary" onClick={onStart}>Begin the checklist</button>
+          <button className="btn primary" onClick={onStart}>{t.begin}</button>
         )}
       </div>
-      <p className="fine">
-        Your answers stay in this browser. This is a self-assessment, not a diagnosis. Your score appears once you've
-        answered every question.
-      </p>
+      <p className="fine">{t.introFine}</p>
+      {t.translationNote && <p className="fine">{t.translationNote}</p>}
     </section>
   );
 }
 
-function Quiz({ answers, setAnswers, index, setIndex, editing, onExit, onFinish }) {
-  const question = QUESTIONS[index];
-  const section = SECTIONS.find((s) => s.id === question.section);
+function Quiz({ t, data, answers, setAnswers, index, setIndex, editing, onExit, onFinish }) {
+  const question = data.questions[index];
+  const section = data.sections.find((s) => s.id === question.section);
   const headingRef = useRef(null);
   const timer = useRef(null);
 
@@ -180,7 +208,7 @@ function Quiz({ answers, setAnswers, index, setIndex, editing, onExit, onFinish 
     const onKey = (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const n = Number(e.key);
-      if (n >= 1 && n <= OPTIONS.length) choose(n - 1);
+      if (n >= 1 && n <= OPTION_COUNT) choose(n - 1);
       else if (e.key === "ArrowLeft" || e.key === "Backspace") back();
     };
     window.addEventListener("keydown", onKey);
@@ -193,15 +221,15 @@ function Quiz({ answers, setAnswers, index, setIndex, editing, onExit, onFinish 
     <section className="quiz">
       <header className="quiz-top">
         <button className="link" onClick={back}>
-          ← {editing ? "Back to results" : index === 0 ? "Home" : "Back"}
+          ← {editing ? t.backToResults : index === 0 ? t.home : t.back}
         </button>
         <span className="count">
-          {index + 1} <span className="muted">/ {QUESTIONS.length}</span>
+          {index + 1} <span className="muted">/ {QUESTION_COUNT}</span>
         </span>
       </header>
 
       <div className="progress" aria-hidden="true">
-        {SECTIONS.map((s) => {
+        {data.sections.map((s) => {
           const start = offset;
           offset += s.items.length;
           const done = answers.slice(start, offset).filter((a) => a !== null).length;
@@ -216,97 +244,89 @@ function Quiz({ answers, setAnswers, index, setIndex, editing, onExit, onFinish 
       <div className="card fade" key={index}>
         <p className="eyebrow">{section.title}</p>
         <h2 ref={headingRef} tabIndex={-1} id="question">
-          {question.text}
+          <span className="qnum">{index + 1}.</span> {question.text}
         </h2>
         <div className="options" role="radiogroup" aria-labelledby="question">
-          {OPTIONS.map((label, value) => {
+          {data.options.map((label, value) => {
             const selected = answers[index] === value;
             return (
               <button
-                key={label}
+                key={value}
                 role="radio"
                 aria-checked={selected}
                 className={`option${selected ? " selected" : ""}`}
                 onClick={() => choose(value)}
               >
                 <span className="dots" aria-hidden="true">
-                  {OPTIONS.slice(1).map((_, d) => (
+                  {data.options.slice(1).map((_, d) => (
                     <i key={d} className={d < value ? "on" : ""} />
                   ))}
                 </span>
-                <span className="option-label">{label}</span>
+                <span className="option-label">
+                  <span className="muted">{value} =</span> {label}
+                </span>
                 <kbd aria-hidden="true">{value + 1}</kbd>
               </button>
             );
           })}
         </div>
       </div>
-      <p className="hint">Tip: press 1–5 to answer, ← to go back.</p>
+      <p className="hint">{t.hint}</p>
     </section>
   );
 }
 
-function Results({ answers, history, onEdit, onRestart }) {
+function Results({ t, lang, data, answers, history, onEdit, onRestart }) {
   const [showAnswers, setShowAnswers] = useState(false);
   const score = answers.reduce((sum, a) => sum + (a ?? 0), 0);
-  const band = bandFor(score);
-  const suicidalStart = QUESTIONS.findIndex((q) => q.section === "suicidal");
+  const bi = bandIndex(score);
+  const suicidalStart = data.questions.findIndex((q) => q.section === "suicidal");
   const atRisk = answers.slice(suicidalStart).some((a) => a > 0);
-  const dateFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const dateFmt = new Intl.DateTimeFormat(lang, { month: "short", day: "numeric", year: "numeric" });
 
   let offset = 0;
-  const sections = SECTIONS.map((s) => {
+  const sections = data.sections.map((s) => {
     const start = offset;
     offset += s.items.length;
     const value = answers.slice(start, offset).reduce((sum, a) => sum + (a ?? 0), 0);
-    return { ...s, start, value, max: s.items.length * (OPTIONS.length - 1) };
+    return { ...s, start, value, max: s.items.length * (OPTION_COUNT - 1) };
   });
-
-  let low = 0;
 
   return (
     <section className="results fade">
-      <p className="eyebrow">Your result</p>
+      <p className="eyebrow">{t.yourResult}</p>
       <div className="score-row">
         <div className="score">
           {score}
           <span>/{MAX_SCORE}</span>
         </div>
-        <div>
-          <h1 className="band">{band.label}</h1>
-          <p className="lede">{band.tone}</p>
-        </div>
+        <h1 className="band">{data.bands[bi].label}</h1>
       </div>
 
       {atRisk && (
         <aside className="alert" role="alert">
-          <h2>Please reach out to someone today</h2>
+          <h2>{t.alertTitle}</h2>
+          <p>{t.alertBody}</p>
           <p>
-            You said you've had thoughts of ending your life or harming yourself. You don't have to handle that alone.
-            If you're in danger right now, call your local emergency number.
-          </p>
-          <p>
-            In the US, call or text <a href="tel:988">988</a> (Suicide &amp; Crisis Lifeline). Elsewhere, find a free,
-            confidential line at <a href="https://findahelpline.com" target="_blank" rel="noreferrer">findahelpline.com</a>.
+            {t.alertUS} <a href="tel:988">988</a> {t.alertUSName} {t.alertElsewhere}{" "}
+            <a href="https://findahelpline.com" target="_blank" rel="noreferrer">findahelpline.com</a>.
           </p>
         </aside>
       )}
 
       <div className="panel">
-        <h3>Where your score falls</h3>
+        <h3>{t.whereFalls}</h3>
         <div className="scale" aria-hidden="true">
-          {BANDS.map((b) => {
-            const width = b.max - low + 1;
-            low = b.max + 1;
-            return <div key={b.label} className={`scale-seg${b === band ? " active" : ""}`} style={{ flexGrow: width }} />;
-          })}
+          {data.bands.map((b, i) => (
+            <div key={b.max} className={`scale-seg${i === bi ? " active" : ""}`} style={{ flexGrow: b.max - b.min + 1 }} />
+          ))}
           <div className="marker" style={{ left: `${(score / MAX_SCORE) * 100}%` }} />
         </div>
         <ol className="legend">
-          {BANDS.map((b, i) => (
-            <li key={b.label} className={b === band ? "active" : ""}>
+          {data.bands.map((b, i) => (
+            <li key={b.max} className={i === bi ? "active" : ""}>
               <span className="range">
-                {i === 0 ? 0 : BANDS[i - 1].max + 1}–{b.max}
+                {b.min}–{b.max}
               </span>
               {b.label}
             </li>
@@ -315,7 +335,7 @@ function Results({ answers, history, onEdit, onRestart }) {
       </div>
 
       <div className="panel">
-        <h3>By area</h3>
+        <h3>{t.byArea}</h3>
         <ul className="breakdown">
           {sections.map((s) => (
             <li key={s.id}>
@@ -335,11 +355,11 @@ function Results({ answers, history, onEdit, onRestart }) {
 
       {history.length > 1 && (
         <div className="panel">
-          <h3>Your recent checks</h3>
+          <h3>{t.recent}</h3>
           <ul className="history">
             {[...history].reverse().slice(0, 8).map((h, i) => (
               <li key={h.id}>
-                <span className="muted">{i === 0 ? "Today's check" : dateFmt.format(h.date)}</span>
+                <span className="muted">{i === 0 ? t.today : dateFmt.format(h.date)}</span>
                 <div className="bar small">
                   <div className="bar-fill" style={{ width: `${(h.score / MAX_SCORE) * 100}%` }} />
                 </div>
@@ -351,24 +371,16 @@ function Results({ answers, history, onEdit, onRestart }) {
       )}
 
       <div className="panel note">
-        <h3>What to do with this</h3>
-        <p>
-          This checklist measures how you've felt recently. It isn't a diagnosis. Burns suggests retaking it every week or
-          so to see how things change over time.
-        </p>
-        {score > 10 && (
-          <p>
-            If your score stays in the mild range or higher for more than a couple of weeks, or feels like it's getting in
-            the way of your life, talking with a doctor or therapist is a good next step.
-          </p>
-        )}
+        <h3>{t.aboutTitle}</h3>
+        <p>{t.about}</p>
+        {t.translationNote && <p>{t.translationNote}</p>}
       </div>
 
       <div className="actions">
         <button className="btn ghost" onClick={() => setShowAnswers((v) => !v)} aria-expanded={showAnswers}>
-          {showAnswers ? "Hide my answers" : "Review my answers"}
+          {showAnswers ? t.hideReview : t.review}
         </button>
-        <button className="btn primary" onClick={onRestart}>Take it again</button>
+        <button className="btn primary" onClick={onRestart}>{t.retake}</button>
       </div>
 
       {showAnswers && (
@@ -380,10 +392,12 @@ function Results({ answers, history, onEdit, onRestart }) {
                 {s.items.map((text, i) => {
                   const qi = s.start + i;
                   return (
-                    <li key={text}>
+                    <li key={qi}>
                       <button onClick={() => onEdit(qi)}>
-                        <span>{text}</span>
-                        <span className="review-answer">{OPTIONS[answers[qi]]}</span>
+                        <span>
+                          {qi + 1}. {text}
+                        </span>
+                        <span className="review-answer">{data.options[answers[qi]]}</span>
                       </button>
                     </li>
                   );
@@ -391,7 +405,7 @@ function Results({ answers, history, onEdit, onRestart }) {
               </ul>
             </div>
           ))}
-          <p className="fine">Tap any answer to change it.</p>
+          <p className="fine">{t.tapToChange}</p>
         </div>
       )}
     </section>

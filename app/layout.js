@@ -6,7 +6,7 @@ const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata = {
   title: "Burns Depression Checklist",
-  description: "A private, 25-question self-check based on David Burns' Feeling Good.",
+  description: "The 25-item Burns Depression Checklist by David D. Burns, MD, in English and Spanish.",
 };
 
 export const viewport = {

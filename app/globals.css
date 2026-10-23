@@ -177,6 +177,35 @@ h2:focus {
   margin-top: 32px;
 }
 
+/* Language switch */
+
+.lang {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: -24px 0 24px;
+}
+
+.lang button {
+  border: 1px solid transparent;
+  background: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.lang button:hover {
+  color: var(--ink);
+}
+
+.lang button.on {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 500;
+}
+
 /* Intro */
 
 .intro {
@@ -285,6 +314,20 @@ h2:focus {
 .option-label {
   flex: 1;
   font-weight: 500;
+}
+
+.option-label .muted {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.option.selected .muted {
+  color: inherit;
+  opacity: 0.7;
+}
+
+.qnum {
+  color: var(--muted);
 }
 
 .dots {
