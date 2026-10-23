@@ -47,7 +47,6 @@ export default function Home() {
       setAnswers(progress.answers);
       setIndex(progress.index ?? 0);
       setStartedAt(progress.startedAt);
-      if (progress.done) setScreen("results");
     }
     setHistory(load(HISTORY_KEY, []));
     setReady(true);
@@ -60,8 +59,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!ready || !startedAt) return;
-    save(PROGRESS_KEY, { startedAt, answers, index, done: screen === "results" });
-  }, [ready, startedAt, answers, index, screen]);
+    save(PROGRESS_KEY, { startedAt, answers, index });
+  }, [ready, startedAt, answers, index]);
 
   const changeLang = (next) => {
     setLang(next);
@@ -102,20 +101,41 @@ export default function Home() {
 
   const t = STRINGS[lang];
   const data = checklist(lang);
-  const answered = answers.filter((a) => a !== null).length;
-  const inProgress = startedAt && answered > 0 && screen === "intro";
+  const answered = startedAt ? answers.filter((a) => a !== null).length : 0;
+  const goHome = () => {
+    setEditing(false);
+    setScreen("intro");
+    window.scrollTo(0, 0);
+  };
 
   return (
     <main className="shell">
-      <nav className="lang" aria-label="Language / Idioma">
-        {LANGS.map((l) => (
-          <button key={l} lang={l} aria-pressed={l === lang} className={l === lang ? "on" : ""} onClick={() => changeLang(l)}>
-            {STRINGS[l].langName}
-          </button>
-        ))}
-      </nav>
+      <header className="topbar">
+        <div className="topbar-left">
+          {screen !== "intro" && (
+            <button className="chip" onClick={goHome}>
+              ← {t.homeLink}
+            </button>
+          )}
+          <Share t={t} />
+        </div>
+        <nav className="lang" aria-label="Language / Idioma">
+          {LANGS.map((l) => (
+            <button key={l} lang={l} aria-pressed={l === lang} className={l === lang ? "on" : ""} onClick={() => changeLang(l)}>
+              <span className="long">{STRINGS[l].langName}</span>
+              <span className="short" aria-hidden="true">{l.toUpperCase()}</span>
+            </button>
+          ))}
+        </nav>
+      </header>
       {screen === "intro" && (
-        <Intro t={t} onStart={start} onResume={inProgress ? () => setScreen("quiz") : null} answered={answered} />
+        <Intro
+          t={t}
+          answered={answered}
+          onStart={start}
+          onResume={() => setScreen("quiz")}
+          onViewResult={() => setScreen("results")}
+        />
       )}
       {screen === "quiz" && (
         <Quiz
@@ -137,7 +157,85 @@ export default function Home() {
   );
 }
 
-function Intro({ t, onStart, onResume, answered }) {
+function Share({ t }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [manual, setManual] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => {
+      if (e.type === "keydown" ? e.key === "Escape" : !ref.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
+  const url = typeof window === "undefined" ? "" : window.location.origin + window.location.pathname;
+  const text = encodeURIComponent(`${t.title} ${url}`);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Older browsers and embedded webviews may block the Clipboard API.
+      const field = document.createElement("textarea");
+      field.value = url;
+      field.setAttribute("readonly", "");
+      field.style.position = "fixed";
+      field.style.opacity = "0";
+      document.body.appendChild(field);
+      field.select();
+      const ok = document.execCommand("copy");
+      field.remove();
+      if (!ok) {
+        setManual(true);
+        return;
+      }
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="share" ref={ref}>
+      <button className="chip" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen((v) => !v)}>
+        {t.share}
+      </button>
+      {open && (
+        <div className="share-menu" role="menu">
+          <a role="menuitem" href={`https://wa.me/?text=${text}`} target="_blank" rel="noreferrer" onClick={() => setOpen(false)}>
+            WhatsApp
+          </a>
+          <a
+            role="menuitem"
+            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => setOpen(false)}
+          >
+            Facebook
+          </a>
+          {manual ? (
+            <input className="share-url" readOnly value={url} aria-label={t.copyLink} autoFocus onFocus={(e) => e.target.select()} />
+          ) : (
+            <button role="menuitem" onClick={copy}>
+              {copied ? t.copied : t.copyLink}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Intro({ t, answered, onStart, onResume, onViewResult }) {
+  const complete = answered === QUESTION_COUNT;
   return (
     <section className="intro fade">
       <p className="eyebrow">{t.author}</p>
@@ -151,7 +249,12 @@ function Intro({ t, onStart, onResume, answered }) {
         ))}
       </ul>
       <div className="actions">
-        {onResume ? (
+        {complete ? (
+          <>
+            <button className="btn primary" onClick={onStart}>{t.begin}</button>
+            <button className="btn ghost" onClick={onViewResult}>{t.viewLast}</button>
+          </>
+        ) : answered > 0 ? (
           <>
             <button className="btn primary" onClick={onResume}>{t.resume(answered, QUESTION_COUNT)}</button>
             <button className="btn ghost" onClick={onStart}>{t.startOver}</button>

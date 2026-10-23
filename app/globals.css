@@ -138,6 +138,7 @@ h2:focus {
   border-radius: 999px;
   padding: 14px 26px;
   font-weight: 500;
+  white-space: nowrap;
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
@@ -179,11 +180,102 @@ h2:focus {
 
 /* Language switch */
 
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: -24px 0 24px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+}
+
+.share {
+  position: relative;
+}
+
+.share-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  min-width: 170px;
+  display: grid;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.share-menu a,
+.share-menu button {
+  display: block;
+  text-align: left;
+  text-decoration: none;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 15px;
+}
+
+.share-url {
+  margin: 4px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.share-menu a:hover,
+.share-menu button:hover {
+  background: var(--bg);
+}
+
 .lang {
   display: flex;
-  justify-content: flex-end;
   gap: 4px;
-  margin: -24px 0 24px;
+}
+
+.lang .short {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .lang .long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .lang .short {
+    display: inline;
+  }
+  .lang button {
+    padding: 4px 9px;
+  }
 }
 
 .lang button {
