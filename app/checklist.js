@@ -1,6 +1,4 @@
 // Burns Depression Checklist (25 items), by David D. Burns, MD.
-// English wording, scale labels and score levels match the published form.
-// The Spanish text is our own translation, not an official one.
 
 export const LANGS = ["en", "es"];
 
