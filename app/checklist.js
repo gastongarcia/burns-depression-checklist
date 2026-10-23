@@ -14,7 +14,7 @@ export const SECTIONS = [
       "Low self-esteem",
       "Feeling worthless or inadequate",
       "Guilt or shame",
-      "Criticizing yourself or blaming yourself",
+      "Criticizing yourself or blaming others",
       "Difficulty making decisions",
     ],
   },
