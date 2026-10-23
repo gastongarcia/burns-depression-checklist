@@ -1,30 +1,19 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Burns Depression Checklist
 
-## Getting Started
+A private, one-question-at-a-time version of the 25-item depression checklist from David D. Burns' _Feeling Good_ / _The Feeling Good Handbook_.
 
-First, run the development server:
+- Each item is rated 0 (Not at all) to 4 (Extremely), for a total of 0–100.
+- The score is shown only after every question is answered, along with where it falls on Burns' scale, a breakdown by area, and recent results.
+- If any suicidal-urge item is above zero, the results lead with crisis resources.
+- Everything stays in the browser (`localStorage`). Nothing is sent to a server.
+
+This is a self-assessment, not a diagnosis.
+
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/import?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+Open http://localhost:3000. The questions and score bands live in `app/checklist.js`.
